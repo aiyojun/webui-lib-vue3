@@ -1,5 +1,5 @@
 import express, {Express} from "express"
-import {git_info} from "./command.ts"
+import {git_checkout, git_info, git_show} from "./command.ts"
 
 const app: Express = express()
 app.use(express.json());
@@ -7,6 +7,8 @@ app.use(express.urlencoded({ extended: true }));
 
 const rpcHandles = [
     {id: 'git_info', hd: async (...args) => await git_info()},
+    {id: 'git_checkout', hd: async (...args) => await git_checkout(args[0])},
+    {id: 'git_show', hd: async (...args) => await git_show(args[0])},
 ]
 
 app.post('/rpc', async (request, response) => {

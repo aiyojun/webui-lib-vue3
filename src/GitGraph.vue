@@ -1,8 +1,12 @@
 <script setup lang="ts">
 
 import {onMounted, reactive, ref} from "vue";
-import gitTest from "./data/git-test.json"
+// import gitTest from "./data/git-test.json"
 import {Graph, Node as GNode, Node2d, Path2d, preset, transparent} from "./ds-graph.ts";
+import {GitCommit} from "./git.declare.ts";
+
+const props = defineProps<{history: Array<GitCommit>}>()
+const emit = defineEmits<{(event: 'select', value: string)}>()
 
 const graph = new Graph()
 const blank = reactive<{
@@ -19,7 +23,10 @@ const layout = reactive({
   width: 1024, height: 1024,
   branchWidth: 180, graphWidth: 80,
 })
-function selectCommit(id: string) { blank.select = id }
+function selectCommit(id: string) {
+  blank.select = id
+  emit('select', id)
+}
 
 function processCommits(commits, graph) {
   graph.clear()
@@ -50,7 +57,7 @@ function getTime(id: string) { return new Date(graph.getOrigin(id)['date']).toIS
 const container = ref<HTMLDivElement>()
 onMounted(async () => {
 
-  processCommits(gitTest.sort((a, b) => a['date'] - b['date']), graph)
+  processCommits(props.history.sort((a, b) => a['date'] - b['date']), graph)
 
   const rect = container.value.getBoundingClientRect()
   layout.width  = rect.width
@@ -127,7 +134,7 @@ onMounted(async () => {
             style="pointer-events: none; user-select: none;"
             :x="blank.messageBegin" :y="node.y - blank.rowHeight * 0.5 + 2"
             :height="blank.rowHeight - 4" :width="layout.width - blank.messageBegin">
-          <div style="display: flex; align-items: center; height: 100%; width: 100%;">
+          <div :style="{color: node.type === 'merge' ? '#aaa' : '#eee'}" style="display: flex; align-items: center; height: 100%; width: 100%;">
             <div style="width: calc(100% - 220px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{node.message}}</div>
             <div style="box-sizing: border-box; padding-left: 5px; width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{getAuthor(node.id)}}</div>
             <div style="box-sizing: border-box; padding-left: 5px; width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{getTime(node.id)}}</div>

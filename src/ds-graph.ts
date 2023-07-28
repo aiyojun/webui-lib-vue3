@@ -1,3 +1,5 @@
+import {exists} from "./utils/jlib.ts";
+
 export class Node {
     prev: Array<Node> = [];
     post: Array<Node> = [];
@@ -42,7 +44,7 @@ export class SignalChannel {
         }
         this.channels.push(true)
         this.maxValue = this.channels.length - 1
-        console.info(`signal channel expand : ${this.channels.length - 1}`)
+        // console.info(`signal channel expand : ${this.channels.length - 1}`)
         return this.channels.length - 1
     }
 
@@ -50,17 +52,9 @@ export class SignalChannel {
         if (this.channels.length <= channelNumber)
             throw new Error(`Error channel number : ${channelNumber}`)
         this.channels[channelNumber] = false
-        console.info(`release channel : ${channelNumber}`)
+        // console.info(`release channel : ${channelNumber}`)
         return this
     }
-}
-
-export function exists(o: any, k?: string) {
-    if (k === undefined)
-        return o !== undefined && o !== null
-    return typeof o === 'object' && o !== null
-        && !(o instanceof Array) && Object.keys(o).includes(k)
-        && o[k] !== undefined && o[k] !== null
 }
 
 export function transparent(c: string, opacity: number) {
@@ -107,12 +101,13 @@ export const preset = {
     colStart: 120,
     strokeWidth: 1.8,
     lineRadius: 10,
+    graphMinWidth: 200,
 }
 
 const ch2x = (ch: number) => preset.colStart + ch * preset.colGutter
 const colorNode = (node: Node) => preset.colors[getChan(node) % preset.colors.length]
 const setChan = (node: Node, ch: number) => {
-    console.info(`set channel ${node.id.substring(0, 4)} : ${ch}`)
+    // console.info(`set channel ${node.id.substring(0, 4)} : ${ch}`)
     node.ref['channel'] = ch
 }
 const getChan = (node: Node) => node.ref['channel']
@@ -226,7 +221,7 @@ export class Graph {
     }
 
     getTextStart() {
-        return ch2x(this.signalChannel.getMax() + 1)
+        return Math.max(ch2x(this.signalChannel.getMax() + 1), preset.graphMinWidth)
     }
 
     getGraphStart() {
