@@ -3,7 +3,7 @@
 import {onMounted, reactive, ref} from "vue";
 // import gitTest from "./data/git-test.json"
 import {Graph, Node as GNode, Node2d, Path2d, preset, transparent} from "./ds-graph.ts";
-import {GitCommit} from "./git.declare.ts";
+import {GitCommit} from "./git.generic.ts";
 
 const props = defineProps<{history: Array<GitCommit>}>()
 const emit = defineEmits<{(event: 'select', value: string)}>()

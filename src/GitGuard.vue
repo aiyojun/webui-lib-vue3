@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import {onMounted, reactive} from "vue";
-import {GitProject} from "./utils/git.ts";
+import {GitProject} from "./git.web.ts";
 import SvgOf from "./ui/SvgOf.vue";
 import TreeView from "./components/TreeView.tsx";
 import GitGraph from "./GitGraph.vue";
@@ -9,11 +9,15 @@ import {preset} from "./ds-graph.ts";
 import {hash} from "./utils/jlib.ts";
 import GitStage from "./GitStage.vue";
 import GitRecord from "./GitRecord.vue";
+import {notify} from "./utils/libxdom.ts";
+import HeadMenu from "./HeadMenu.vue";
+import GitFileChange from "./GitFileChange.vue";
+import {GitChange} from "./git.generic.ts";
 
 
 const info = reactive<{ g: GitProject }>({g: null})
 const menu = reactive({currentBranch: false, remoteRepositories: false})
-const xGui = reactive<{ graphMD5: string, record: any }>({graphMD5: '', record: null})
+const xGui = reactive<{ graphMD5: string, record: any, changedFile: any }>({graphMD5: '', record: null, changedFile: null})
 function convertRemote(gp: GitProject) {
   return gp.remoteRepositories.map(repo => ({
     name: repo.name, children: repo.branches.map(br => ({name: br}))}))
@@ -24,6 +28,15 @@ async function selectCommit(id) {
   console.info(`select commit ${id.substring(0, 4)}`)
 }
 
+async function reload() {
+  await info.g.init()
+  notify({message: 'Refresh success!'})
+}
+
+function showFileChange(xfc: GitChange) {
+  console.info("xfc :", JSON.stringify(xfc))
+  xGui.changedFile = xfc
+}
 
 onMounted(async () => {
   const git = reactive(await GitProject.build())
@@ -45,29 +58,33 @@ onMounted(async () => {
       <div>
         <div class="header-btn fc">
           <div style="margin-right: .5rem; color: #fff; font-size: 1.25rem; font-weight: bold;">{{info.g.name}}</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" fill="#aaa"/>
+          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
         </div>
-        <div class="header-btn fc" @click="() => menu.currentBranch = !menu.currentBranch">
-          <SvgOf name="branch" :width="18" :height="18" fill="#aaa"/>
+        <HeadMenu :items="info.g.localBranches" @clickMenu="(br) => {info.g.checkout(br); menu.currentBranch = br;}">
+          <SvgOf name="branch" :width="18" :height="18" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" fill="#aaa"/>
-          <div class="btn-menu" v-if="menu.currentBranch">
-            <div v-for="(branch) in info.g.localBranches" class="btn-menu-item state-hover" @click="() => {info.g.checkout(branch);}">{{branch}}</div>
-          </div>
-        </div>
-        <div class="header-btn fc">
-          <SvgOf name="download" :width="14" :height="14" fill="#aaa"/>
+          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
+        </HeadMenu>
+<!--        <div class="header-btn fc" @click="() => menu.currentBranch = !menu.currentBranch">-->
+<!--          <SvgOf name="branch" :width="18" :height="18" color="#aaa"/>-->
+<!--          <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>-->
+<!--          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>-->
+<!--          <div class="btn-menu" v-if="menu.currentBranch">-->
+<!--            <div v-for="(branch) in info.g.localBranches" class="btn-menu-item state-hover" @click="() => {info.g.checkout(branch);}">{{branch}}</div>-->
+<!--          </div>-->
+<!--        </div>-->
+        <div class="header-btn fc" @click="async () => {await info.g.pull(); notify({message: 'Pull success!'})}">
+          <SvgOf name="download" :width="14" :height="14" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">Pull</div>
-
         </div>
-        <div class="header-btn fc">
-          <SvgOf name="upload" :width="14" :height="14" fill="#aaa"/>
+        <div class="header-btn fc" @click="async () => {await info.g.push(); notify({message: 'Push success!'})}">
+          <SvgOf name="upload" :width="14" :height="14" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">Push</div>
         </div>
         <div class="header-btn fc" @click="() => menu.remoteRepositories = !menu.remoteRepositories">
-          <SvgOf name="cloud" :width="18" :height="18" fill="#aaa"/>
+          <SvgOf name="cloud" :width="18" :height="18" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" fill="#aaa"/>
+          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
           <div class="btn-menu" v-if="menu.remoteRepositories">
             <div v-for="(repo) in info.g.remoteRepositories"
                  class="btn-menu-item state-hover">{{repo.name}}</div>
@@ -75,14 +92,14 @@ onMounted(async () => {
         </div>
       </div>
       <div>
-        <div class="header-btn fc">
-          <SvgOf name="reload" :width="18" :height="18" fill="#aaa"/>
+        <div class="header-btn fc" @click="() => {reload()}">
+          <SvgOf name="reload" :width="18" :height="18" color="#aaa"/>
         </div>
         <div class="header-btn fc">
-          <SvgOf name="search" :width="18" :height="18" fill="#aaa"/>
+          <SvgOf name="search" :width="18" :height="18" color="#aaa"/>
         </div>
         <div class="header-btn fc">
-          <SvgOf name="settings" :width="18" :height="18" fill="#aaa"/>
+          <SvgOf name="settings" :width="18" :height="18" color="#aaa"/>
         </div>
       </div>
     </div>
@@ -91,19 +108,32 @@ onMounted(async () => {
       <div class="sidebar">
 <!--        <div class="nav-header">Remote</div>-->
 <!--        <TreeView :root="convertRemote(info.g)"/>-->
-        <GitRecord v-if="xGui.record !== null" :commit="xGui.record.commit" :changes="xGui.record.changes" />
-        <GitStage v-else :key="hash(info.g.changes.map(c => c.dump()))" :project="info.g" />
+        <GitRecord v-if="xGui.record !== null"
+                   :commit="xGui.record.commit" :changes="xGui.record.changes"
+                   @showFileChange="showFileChange"/>
+        <GitStage v-else :key="hash(info.g.changes.map(c => c.dump()))" :project="info.g"
+                  @clickStage="filepath => {info.g.stage(filepath)}"
+                  @clickUnstage="filepath => {info.g.unstage(filepath)}"
+                  @clickIgnore="filepath => {info.g.ignore(filepath)}"
+                  @clickCommit="message => {info.g.commit(message)}"
+                  @clickCommitWithPush="message => {info.g.commit(message); info.g.push();}"
+                  @showFileChange="showFileChange"/>
       </div>
       <div class="main-body" style="position: relative;">
 
-        <GitGraph :key="hash(info.g.history) + xGui.graphMD5"
+        <GitFileChange v-if="xGui.changedFile !== null"
+                       :change="xGui.changedFile"
+                       @close="() => {xGui.changedFile = null}" />
+        <GitGraph v-else :key="hash(info.g.history) + xGui.graphMD5"
                   :history="info.g.history"
                   @select="selectCommit"/>
 
       </div>
     </div>
     <div class="footer">
-      <div></div>
+      <div>
+        <div class="header-btn fc">GitGuard</div>
+      </div>
       <div style="display: flex;">
         <div class="header-btn fc"><a href="">Support</a></div>
         <div class="header-btn fc">Version 0.0.1</div>
