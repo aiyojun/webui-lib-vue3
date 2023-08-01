@@ -40,6 +40,7 @@ app.post('/rpc', async (request, response) => {
                 console.error(e)
                 response.send({error: e.toString()})
             }
+            return
         }
     }
 

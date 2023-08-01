@@ -52,10 +52,10 @@ onMounted(() => {
           </div>
           <div style="margin-left: .75rem;">{{change.file}}</div>
           <div v-if="rd.unstaged[ci].hover" style="position: absolute; top: 0; right: 0; height: 100%; display: flex; align-items: center;">
-            <div class="btn-stage" @click="() => {emit('clickStage', change.file)}"
+            <div class="btn-stage" @click="(e) => {e.stopPropagation();emit('clickStage', change.file)}"
                  style="margin-right: .5rem;"
             >Stage</div>
-            <div class="btn-stage" @click="() => {emit('clickIgnore', change.file)}" style="background-color: #555555;">Ignore</div>
+            <div class="btn-stage" @click="(e) => {e.stopPropagation();emit('clickIgnore', change.file)}" style="background-color: #555555;">Ignore</div>
           </div>
         </div>
       </div>

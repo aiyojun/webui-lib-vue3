@@ -5,7 +5,10 @@ import SvgOf from "./ui/SvgOf.vue";
 import {onMounted, reactive} from "vue";
 
 const props = defineProps<{commit: GitCommit, changes: Array<GitChange>}>()
-const emit = defineEmits<{(event: 'showFileChange', value: GitChange): void}>()
+const emit = defineEmits<{
+  (event: 'showFileChange', value: GitChange): void,
+  (event: 'close'): void,
+}>()
 
 // const rd = reactive({changes: []})
 //
@@ -19,6 +22,7 @@ const emit = defineEmits<{(event: 'showFileChange', value: GitChange): void}>()
   <div style="height: 100%; box-sizing: border-box;">
 
 
+    <div class="bg-sec nav-header state-hover" style="justify-content: center; cursor: pointer; color: #85a9ff; font-weight: normal;" @click="() => {emit('close')}">View Changes</div>
 
 
     <div class="bg-sec nav-header">Commit Record</div>
@@ -69,7 +73,7 @@ const emit = defineEmits<{(event: 'showFileChange', value: GitChange): void}>()
 
 
     <div class="bg-sec nav-header">Changes ({{changes.length}})</div>
-    <div class="bg-sec" style="width: 100%; height: calc(100% - 17rem); position: relative; box-sizing: border-box; padding: .25rem .75rem; overflow: auto;">
+    <div class="bg-sec" style="width: 100%; height: calc(100% - 17rem - 2rem); position: relative; box-sizing: border-box; padding: .25rem .75rem; overflow: auto;">
       <div v-for="(change, ci) in changes"
            class="git-change state-hover"
            @click="() => {emit('showFileChange', change)}">

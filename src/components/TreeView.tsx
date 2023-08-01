@@ -15,7 +15,7 @@ export default defineComponent({
         const item = (node, depth, isFolder=false) => <div
             class="state-hover" style={`height: 2rem; width: 100%; box-sizing: border-box; padding-left: ${(depth + 1) * 8}px; border-radius: 6px; cursor: pointer; display: flex; align-items: center;`} onClick={() => clickItem(node, depth)}>
             <div style="width: 10px; height: 10px; display: flex; justify-content: center; align-items: center;">
-                {isFolder ? <SvgOf name="arrow-right" style={`transform: rotate(${node['fold'] ? 0 : 90 }deg);`} width={8} height={8} fill="#ddd"/> : null}
+                {isFolder ? <SvgOf name="arrow-right" style={`transform: rotate(${node['fold'] ? 0 : 90 }deg);`} width={8} height={8} color="#ddd"/> : null}
             </div>
             <div style="margin-left: .5rem;">{node.name || ''}</div>
         </div>

@@ -1,5 +1,6 @@
 import {invoke} from "./utils/rpc.ts";
 import {GitChange, GitCommit} from "./git.generic.ts";
+import {exists} from "./utils/jlib.ts";
 
 export class GitRepository {
     name: string;
@@ -12,10 +13,16 @@ export class FileChange {
     staged: boolean;
 }
 
+export interface IGitUpstream {
+    remote: string;
+    branch: string;
+}
+
 export class GitProject {
     name: string;
     currentBranch: string;
     localBranches: Array<string> = [];
+    upstreams: Record<string, IGitUpstream> = {};
     remoteRepositories: Array<GitRepository> = [];
     tags: Array<string> = [];
     history: Array<GitCommit> = [];
@@ -29,6 +36,12 @@ export class GitProject {
                 return this.history[i]
         }
         return null
+    }
+
+    async open() {
+        const r = await invoke('git_open_repo')
+        console.info("open : ", r)
+        return r
     }
 
     async ignore(filepath: string) {
@@ -58,10 +71,16 @@ export class GitProject {
     }
 
     async pull() {
-        await invoke('git_pull')
+        if (exists(this.upstreams, this.currentBranch))
+            await invoke('git_pull')
+        else
+            console.info(`... git pull --set-upstream remote branch`)
     }
     async push() {
-        await invoke('git_push')
+        if (exists(this.upstreams, this.currentBranch))
+            await invoke('git_push')
+        else
+            console.info(`... git push --set-upstream remote branch`)
     }
 
     async commit(message: string) {
@@ -117,6 +136,7 @@ export class GitProject {
         })
         project.history = resp['history'].map(his => GitCommit.build(his))
         project.changes = resp['changes'].map(chg => new GitChange(chg['flag'], chg['file']).setStaged(chg['staged']).setPlaces(chg['places']))
+        project.upstreams = resp['upstreams']
         return this
     }
 

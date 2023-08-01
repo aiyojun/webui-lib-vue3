@@ -3,9 +3,7 @@
 import {onMounted, reactive} from "vue";
 import {GitProject} from "./git.web.ts";
 import SvgOf from "./ui/SvgOf.vue";
-import TreeView from "./components/TreeView.tsx";
 import GitGraph from "./GitGraph.vue";
-import {preset} from "./ds-graph.ts";
 import {hash} from "./utils/jlib.ts";
 import GitStage from "./GitStage.vue";
 import GitRecord from "./GitRecord.vue";
@@ -13,7 +11,6 @@ import {notify} from "./utils/libxdom.ts";
 import HeadMenu from "./HeadMenu.vue";
 import GitFileChange from "./GitFileChange.vue";
 import {GitChange} from "./git.generic.ts";
-
 
 const info = reactive<{ g: GitProject }>({g: null})
 const menu = reactive({currentBranch: false, remoteRepositories: false})
@@ -34,17 +31,13 @@ async function reload() {
 }
 
 function showFileChange(xfc: GitChange) {
-  console.info("xfc :", JSON.stringify(xfc))
   xGui.changedFile = xfc
 }
 
 onMounted(async () => {
-  const git = reactive(await GitProject.build())
-  info.g = git
-  console.info(git)
+  info.g = reactive(await GitProject.build())
 
   window.addEventListener('resize', () => {
-    console.info(`window.resize ...`)
     xGui.graphMD5 = `${new Date().getTime()}`
   })
 })
@@ -56,23 +49,19 @@ onMounted(async () => {
   <div class="home" v-if="info.g !== null">
     <div class="header">
       <div>
+        <div class="header-btn fc" @click="() => {info.g.open()}">
+          <SvgOf name="folder" :width="20" :height="20" color="#fff"/>
+        </div>
         <div class="header-btn fc">
-          <div style="margin-right: .5rem; color: #fff; font-size: 1.25rem; font-weight: bold;">{{info.g.name}}</div>
+          <SvgOf name="close" :width="16" :height="16" color="#aaa" hover="white"/>
+          <div style="margin: 0 .5rem; color: #fff; font-size: 1.25rem; font-weight: bold;">{{info.g.name}}</div>
           <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
         </div>
-        <HeadMenu :items="info.g.localBranches" @clickMenu="(br) => {info.g.checkout(br); menu.currentBranch = br;}">
+        <HeadMenu :items="info.g.localBranches" @clickMenu="(br) => {info.g.checkout(br); info.g.currentBranch = br;}">
           <SvgOf name="branch" :width="18" :height="18" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>
           <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
         </HeadMenu>
-<!--        <div class="header-btn fc" @click="() => menu.currentBranch = !menu.currentBranch">-->
-<!--          <SvgOf name="branch" :width="18" :height="18" color="#aaa"/>-->
-<!--          <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>-->
-<!--          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>-->
-<!--          <div class="btn-menu" v-if="menu.currentBranch">-->
-<!--            <div v-for="(branch) in info.g.localBranches" class="btn-menu-item state-hover" @click="() => {info.g.checkout(branch);}">{{branch}}</div>-->
-<!--          </div>-->
-<!--        </div>-->
         <div class="header-btn fc" @click="async () => {await info.g.pull(); notify({message: 'Pull success!'})}">
           <SvgOf name="download" :width="14" :height="14" color="#aaa"/>
           <div style="margin-left: .5rem; margin-right: .5rem;">Pull</div>
@@ -110,7 +99,7 @@ onMounted(async () => {
 <!--        <TreeView :root="convertRemote(info.g)"/>-->
         <GitRecord v-if="xGui.record !== null"
                    :commit="xGui.record.commit" :changes="xGui.record.changes"
-                   @showFileChange="showFileChange"/>
+                   @showFileChange="showFileChange" @close="() => xGui.record = null"/>
         <GitStage v-else :key="hash(info.g.changes.map(c => c.dump()))" :project="info.g"
                   @clickStage="filepath => {info.g.stage(filepath)}"
                   @clickUnstage="filepath => {info.g.unstage(filepath)}"

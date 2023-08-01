@@ -17,7 +17,7 @@ const emit = defineEmits<{(event: 'close'): void}>()
         <SvgOf name="close" :width="18" :height="18" color="#fff" />
       </div>
     </div>
-    <div style="position: relative;">
+    <div style="position: relative; overflow: auto;">
       <GitChangedPlace v-for="(place, pi) in change.places" :key="`${pi}${place.text}`" :location="place.location" :text="place.text" />
     </div>
   </div>
@@ -33,7 +33,6 @@ const emit = defineEmits<{(event: 'close'): void}>()
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: auto;
 }
 
 .container>div {

@@ -95,3 +95,7 @@ span.large {
   background: #fff;
   box-shadow: 0 1px 3px 3px rgba(0,0,0,.05);
 }
+
+.state-hover-white:hover {
+  fill: #fff;
+}
