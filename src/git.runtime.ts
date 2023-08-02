@@ -5,7 +5,7 @@ import * as process from "node:process";
 import * as child_process from 'node:child_process'
 import {exists} from "./utils/jlib.ts";
 import {GitChange, GitCommit, GitUser} from "./git.generic.ts";
-// import {dialog, shell} from "electron"
+import {dialog, shell} from "electron"
 
 export function exec(cmd: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -17,16 +17,16 @@ export function exec(cmd: string): Promise<string> {
 }
 
 export async function git_open_repo(): Promise<Array<string>> {
-    // return (await dialog.showOpenDialog({
-    //     title: "GitGuard",
-    //     properties: ['openDirectory']
-    // }))['filePaths']
+    return (await dialog.showOpenDialog({
+        title: "GitGuard",
+        properties: ['openDirectory']
+    }))['filePaths']
     // // Just for test
-    return ["C:\\jqs\\dataflow"]
+    // return ["C:\\jqs\\dataflow"]
 }
 
 export function git_open_external(url: string) {
-    // return shell.openExternal(url)
+    return shell.openExternal(url)
 }
 
 export function git_enter_repo(path) {
@@ -372,6 +372,22 @@ export async function git_ignore(filepath) {
     fs.closeSync(fd)
 }
 
+export async function git_recent() {
+    const cfg = await git_config_list()
+    let repos = []
+    if (exists(cfg, 'magic') && exists(cfg['magic'], 'recentrepo')) {
+        const x = cfg['magic']['recentrepo']
+        repos = (x instanceof Array ? x : [x])
+    }
+    if (exists(cfg, 'gui') && exists(cfg['gui'], 'recentrepo')) {
+        const x = cfg['gui']['recentrepo']
+        repos = (x instanceof Array ? x : [x])
+    }
+    if (repos.length > 8)
+        repos = repos.slice(0, 8)
+    return repos
+}
+
 export async function git_config_list() {
     const message = await exec(`git config --list`)
     const cfg = {}
@@ -446,6 +462,7 @@ export async function invoke(method: string, args: Array<any>) {
         {id: 'git_open_repo', hd: async (...args) => await git_open_repo()},
         {id: 'git_enter_repo', hd: async (...args) => git_enter_repo(args[0])},
         {id: 'git_open_external', hd: (...args) => git_open_external(args[0])},
+        {id: 'git_recent', hd: async (...args) => git_recent()},
     ]
     for (let i = 0; i < rpcHandles.length; i++) {
         if (method === rpcHandles[i].id) {

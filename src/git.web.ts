@@ -48,8 +48,18 @@ export class GitProject {
         const path = (await invoke('git_open_repo'))[0]
         console.info("open : ", path)
         if (!(await invoke('git_enter_repo', [path]))) {
-            notify({message: `Enter repo failed!`})
+            notify({message: `Enter repo [${path}] failed!`})
         }
+    }
+
+    static async enter(path: string) {
+        if (!(await invoke('git_enter_repo', [path]))) {
+            notify({message: `Enter repo [${path}] failed!`})
+        }
+    }
+
+    static async getRecent(): Promise<Array<string>> {
+        return await invoke('git_recent')
     }
 
     async ignore(filepath: string) {

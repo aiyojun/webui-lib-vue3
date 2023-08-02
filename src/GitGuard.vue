@@ -12,11 +12,13 @@ import HeadMenu from "./HeadMenu.vue";
 import GitFileChange from "./GitFileChange.vue";
 import {GitChange} from "./git.generic.ts";
 import SvgPos from "./assets/location.svg"
+import GitRecent from "./GitRecent.vue";
 
 const info = reactive<{ g: GitProject }>({g: null})
 const menu = reactive({currentBranch: false, remoteRepositories: false})
 const xGui = reactive<{ md5: string, showTrack: boolean, record: any, changedFile: any }>(
     {md5: '', showTrack: false, record: null, changedFile: null})
+const recentRepositories = reactive([])
 function convertRemote(gp: GitProject) {
   return gp.remoteRepositories.map(repo => ({
     name: repo.name, children: repo.branches.map(br => ({name: br}))}))
@@ -41,7 +43,7 @@ async function init() {
 }
 
 onMounted(async () => {
-
+  (await GitProject.getRecent()).forEach(repo => recentRepositories.push(repo))
 
   window.addEventListener('resize', () => {
     xGui.md5 = `${new Date().getTime()}`
@@ -116,9 +118,6 @@ onMounted(async () => {
       </div>
     </div>
     <div class="main">
-      <div v-if="info.g === null" class="fc" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-        <img alt="" :src="SvgPos" width="200" height="200"/>
-      </div>
       <div v-if="info.g !== null" class="sidebar">
 <!--        <div class="nav-header">Remote</div>-->
 <!--        <TreeView :root="convertRemote(info.g)"/>-->
@@ -146,6 +145,16 @@ onMounted(async () => {
                   @select="selectCommit"/>
 
       </div>
+
+      <div v-if="info.g === null" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex;">
+        <div style="width: 40%; height: 100%; position: relative;">
+          <GitRecent :repos="recentRepositories" @openRepo="async (repo) => {await GitProject.enter(repo); await init()}"/>
+        </div>
+        <div style="width: 60%; height: 100%; position: relative;" class="fc">
+          <img alt="" :src="SvgPos" width="200" height="200"/>
+        </div>
+      </div>
+
     </div>
     <div class="footer">
       <div>
@@ -178,6 +187,7 @@ onMounted(async () => {
 }
 
 .main {
+  position: relative;
   height: calc(100% - 5rem);
   display: flex;
 }
