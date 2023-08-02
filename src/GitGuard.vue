@@ -11,10 +11,12 @@ import {notify} from "./utils/libxdom.ts";
 import HeadMenu from "./HeadMenu.vue";
 import GitFileChange from "./GitFileChange.vue";
 import {GitChange} from "./git.generic.ts";
+import SvgPos from "./assets/location.svg"
 
 const info = reactive<{ g: GitProject }>({g: null})
 const menu = reactive({currentBranch: false, remoteRepositories: false})
-const xGui = reactive<{ graphMD5: string, record: any, changedFile: any }>({graphMD5: '', record: null, changedFile: null})
+const xGui = reactive<{ md5: string, showTrack: boolean, record: any, changedFile: any }>(
+    {md5: '', showTrack: false, record: null, changedFile: null})
 function convertRemote(gp: GitProject) {
   return gp.remoteRepositories.map(repo => ({
     name: repo.name, children: repo.branches.map(br => ({name: br}))}))
@@ -34,11 +36,15 @@ function showFileChange(xfc: GitChange) {
   xGui.changedFile = xfc
 }
 
-onMounted(async () => {
+async function init() {
   info.g = reactive(await GitProject.build())
+}
+
+onMounted(async () => {
+
 
   window.addEventListener('resize', () => {
-    xGui.graphMD5 = `${new Date().getTime()}`
+    xGui.md5 = `${new Date().getTime()}`
   })
 })
 
@@ -46,55 +52,74 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="home" v-if="info.g !== null">
+  <div class="home" :key="info.g?.name || 'nothing'">
     <div class="header">
-      <div>
-        <div class="header-btn fc" @click="() => {info.g.open()}">
-          <SvgOf name="folder" :width="20" :height="20" color="#fff"/>
+      <div style="width: 100%;">
+        <div class="header-btn fc" @click="async () => {await GitProject.openAndEnter(); await init()}">
+          <SvgOf name="folder" :width="20" :height="20" color="var(--text-primary-color)"/>
         </div>
-        <div class="header-btn fc">
-          <SvgOf name="close" :width="16" :height="16" color="#aaa" hover="white"/>
-          <div style="margin: 0 .5rem; color: #fff; font-size: 1.25rem; font-weight: bold;">{{info.g.name}}</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
-        </div>
-        <HeadMenu :items="info.g.localBranches" @clickMenu="(br) => {info.g.checkout(br); info.g.currentBranch = br;}">
-          <SvgOf name="branch" :width="18" :height="18" color="#aaa"/>
-          <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
-        </HeadMenu>
-        <div class="header-btn fc" @click="async () => {await info.g.pull(); notify({message: 'Pull success!'})}">
-          <SvgOf name="download" :width="14" :height="14" color="#aaa"/>
-          <div style="margin-left: .5rem; margin-right: .5rem;">Pull</div>
-        </div>
-        <div class="header-btn fc" @click="async () => {await info.g.push(); notify({message: 'Push success!'})}">
-          <SvgOf name="upload" :width="14" :height="14" color="#aaa"/>
-          <div style="margin-left: .5rem; margin-right: .5rem;">Push</div>
-        </div>
-        <div class="header-btn fc" @click="() => menu.remoteRepositories = !menu.remoteRepositories">
-          <SvgOf name="cloud" :width="18" :height="18" color="#aaa"/>
-          <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>
-          <SvgOf name="small-arrow-down" :width="10" :height="10" color="#aaa"/>
-          <div class="btn-menu" v-if="menu.remoteRepositories">
-            <div v-for="(repo) in info.g.remoteRepositories"
-                 class="btn-menu-item state-hover">{{repo.name}}</div>
+        <div v-if="info.g !== null" style="height: 100%; display: flex;">
+          <div class="header-btn fc" style="background-color: rgba(255,255,255,.1);">
+<!--            <SvgOf name="close" :width="16" :height="16" color="var(--text-third-color)" hover="white"/>-->
+            <div style="margin: 0 .5rem; color: var(--text-primary-color); font-size: 1.25rem; font-weight: bold;">{{info.g.name}}</div>
+<!--            <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>-->
+          </div>
+          <HeadMenu :items="info.g.localBranches" @clickMenu="(br) => {info.g.checkout(br); info.g.currentBranch = br;}">
+            <SvgOf name="branch" :width="18" :height="18" color="var(--text-third-color)"/>
+            <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>
+            <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>
+          </HeadMenu>
+          <div class="header-btn fc" @click="async () => {await info.g.pull(); notify({message: 'Pull success!'})}">
+            <SvgOf name="download" :width="14" :height="14" color="var(--text-third-color)"/>
+            <div style="margin-left: .5rem; margin-right: .5rem;">Pull</div>
+          </div>
+          <div class="header-btn fc" @click="async () => {await info.g.push(); notify({message: 'Push success!'})}">
+            <SvgOf name="upload" :width="14" :height="14" color="var(--text-third-color)"/>
+            <div style="margin-left: .5rem; margin-right: .5rem;">Push</div>
+          </div>
+
+
+          <HeadMenu :items="info.g.remoteRepositories.map(rr => rr.name)" @clickMenu="(rr) => {}">
+            <SvgOf name="cloud" :width="18" :height="18" color="var(--text-third-color)"/>
+            <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>
+            <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>
+          </HeadMenu>
+
+<!--          <div class="header-btn fc" @click="() => menu.remoteRepositories = !menu.remoteRepositories">-->
+<!--            <SvgOf name="cloud" :width="18" :height="18" color="var(&#45;&#45;text-third-color)"/>-->
+<!--            <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>-->
+<!--            <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(&#45;&#45;text-third-color)"/>-->
+<!--            <div class="btn-menu" v-if="menu.remoteRepositories">-->
+<!--              <div v-for="(repo) in info.g.remoteRepositories"-->
+<!--                   class="btn-menu-item state-hover">{{repo.name}}</div>-->
+<!--            </div>-->
+<!--          </div>-->
+          <div class="header-btn fc" @click="() => {xGui.showTrack = !xGui.showTrack; notify({message: xGui.showTrack ? 'Whole commits!' : 'Current branch commits!'})}">
+            <SvgOf name="branch-child" :width="14" :height="14" color="var(--text-third-color)"/>
+            <div style="margin-left: .5rem; margin-right: .5rem;">{{xGui.showTrack ? 'Branch' : 'History'}}</div>
           </div>
         </div>
+        <div style="height: 100%; width: 100%; -webkit-app-region: drag;"></div>
       </div>
-      <div>
-        <div class="header-btn fc" @click="() => {reload()}">
-          <SvgOf name="reload" :width="18" :height="18" color="#aaa"/>
+
+
+      <div style="margin-right: 140px;">
+        <div v-if="info.g !== null" class="header-btn fc" @click="() => {reload()}">
+          <SvgOf name="reload" :width="18" :height="18" color="var(--text-third-color)"/>
         </div>
         <div class="header-btn fc">
-          <SvgOf name="search" :width="18" :height="18" color="#aaa"/>
+          <SvgOf name="search" :width="18" :height="18" color="var(--text-third-color)"/>
         </div>
         <div class="header-btn fc">
-          <SvgOf name="settings" :width="18" :height="18" color="#aaa"/>
+          <SvgOf name="settings" :width="18" :height="18" color="var(--text-third-color)"/>
         </div>
       </div>
     </div>
     <div class="main">
-<!--      <div class="dock"></div>-->
-      <div class="sidebar">
+      <div v-if="info.g === null" class="fc" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        <img alt="" :src="SvgPos" width="200" height="200"/>
+      </div>
+      <div v-if="info.g !== null" class="sidebar">
 <!--        <div class="nav-header">Remote</div>-->
 <!--        <TreeView :root="convertRemote(info.g)"/>-->
         <GitRecord v-if="xGui.record !== null"
@@ -108,23 +133,26 @@ onMounted(async () => {
                   @clickCommitWithPush="message => {info.g.commit(message); info.g.push();}"
                   @showFileChange="showFileChange"/>
       </div>
-      <div class="main-body" style="position: relative;">
+      <div v-if="info.g !== null" class="main-body" style="position: relative;">
 
         <GitFileChange v-if="xGui.changedFile !== null"
                        :change="xGui.changedFile"
                        @close="() => {xGui.changedFile = null}" />
-        <GitGraph v-else :key="hash(info.g.history) + xGui.graphMD5"
+        <GitGraph v-else-if="!xGui.showTrack" :key="hash(info.g.history) + xGui.md5"
                   :history="info.g.history"
+                  @select="selectCommit"/>
+        <GitGraph v-else-if="xGui.showTrack" :key="hash(info.g.track) + xGui.md5"
+                  :history="info.g.track"
                   @select="selectCommit"/>
 
       </div>
     </div>
     <div class="footer">
       <div>
-        <div class="header-btn fc">GitGuard</div>
+        <div class="header-btn fc" style="background-color: rgba(255,255,255,.1);">GitGuard</div>
       </div>
       <div style="display: flex;">
-        <div class="header-btn fc"><a href="">Support</a></div>
+        <div class="header-btn fc"><a @click="() => GitProject.jump('https://starspicking.com')">Support</a></div>
         <div class="header-btn fc">Version 0.0.1</div>
       </div>
     </div>
@@ -133,27 +161,12 @@ onMounted(async () => {
 
 <style scoped>
 
-.home {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: var(--primary-background-color);
-  font-family: Roboto, system-ui, Avenir, Helvetica, Arial, sans-serif;
-}
-
-.home > div {
-  width: 100%;
-}
-
 .header {
   position: relative;
   z-index: 10;
   height: calc(3rem - 1px);
   margin-bottom: 1px;
-  background-color: var(--secondary-background-color);
+  background-color: var(--third-background-color);
   display: flex;
   justify-content: space-between;
 }
@@ -171,12 +184,6 @@ onMounted(async () => {
 
 .main > div {
   height: 100%;
-}
-
-.dock {
-  width: calc(3rem - 1px);
-  margin-right: 1px;
-  background-color: var(--secondary-background-color);
 }
 
 .sidebar {
@@ -199,7 +206,8 @@ onMounted(async () => {
 .footer {
   height: calc(2rem - 1px);
   margin-top: 1px;
-  background-color: var(--secondary-background-color);
+  color: var(--text-comment-color);
+  background-color: var(--third-background-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -218,7 +226,7 @@ onMounted(async () => {
   padding: 0 .75rem;
   cursor: pointer;
   font-weight: bold;
-  color: #aaa;
+  color: var(--text-third-color);
   white-space: nowrap;
 }
 
@@ -228,7 +236,6 @@ onMounted(async () => {
 
 .footer .header-btn {
   font-weight: normal;
-  color: #888;
 }
 
 .btn-menu {

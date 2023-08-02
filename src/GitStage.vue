@@ -4,7 +4,8 @@ import {GitProject} from "./git.web.ts";
 import SvgOf from "./ui/SvgOf.vue";
 import {onMounted, reactive, ref} from "vue";
 import {GitChange, mapChangeColor, mapChangeIcon} from "./git.generic.ts";
-import NoData from "./NoData.vue";
+import NoData from "./ui/NoData.vue";
+import {basename, dirname} from "./utils/jlib.ts";
 
 const props = defineProps<{ project: GitProject }>()
 const rd = reactive({staged: [], unstaged: []})
@@ -21,11 +22,7 @@ const emit = defineEmits<{
 
 function commit() {emit('clickCommit', message.value.value)}
 function commitWithPush() {emit('clickCommitWithPush', message.value.value)}
-function convert2origin(c) {
-  const x = props.project.changes.filter(_c => _c.file === c.file)[0]
-  console.info("x :", x)
-  return x
-}
+function convert2origin(c) {return props.project.changes.filter(_c => _c.file === c.file)[0]}
 
 onMounted(() => {
   rd.staged   = reactive(props.project.changes.filter(c=> c.staged).map(c => ({staged: c.staged, flag: c.flag, file: c.file, hover: false})).sort((a,b)=>a.file.localeCompare(b.file)))
@@ -37,7 +34,7 @@ onMounted(() => {
 <template>
   <div style="height: calc(100% - 10rem); box-sizing: border-box;">
     <div style="height: calc(50% - 1px); margin-bottom: 1px;">
-      <div class="bg-sec nav-header">Unstaged Changes</div>
+      <div class="bg-sec nav-header">Unstaged Changes ({{rd.unstaged.length}})</div>
       <div class="bg-sec bg-stage">
 
         <NoData v-if="rd.unstaged.length === 0" />
@@ -50,7 +47,10 @@ onMounted(() => {
           <div style="width: 18px; height: 18px;" class="fc">
             <SvgOf :name="mapChangeIcon(change.flag)" :width="18" :height="18" :color="mapChangeColor(change.flag)" />
           </div>
-          <div style="margin-left: .75rem;">{{change.file}}</div>
+          <div class="mw100-text" style="margin-left: .75rem; color: var(--text-comment-color);">{{dirname(change.file)}}</div>
+          <div style="color: var(--text-comment-color);">{{(dirname(change.file).length === 0 ? '' : '/')}}</div>
+          <div>{{basename(change.file)}}</div>
+<!--          <div style="margin-left: .75rem;">{{change.file}}</div>-->
           <div v-if="rd.unstaged[ci].hover" style="position: absolute; top: 0; right: 0; height: 100%; display: flex; align-items: center;">
             <div class="btn-stage" @click="(e) => {e.stopPropagation();emit('clickStage', change.file)}"
                  style="margin-right: .5rem;"
@@ -61,7 +61,7 @@ onMounted(() => {
       </div>
     </div>
     <div style="height: calc(50% - 1px); margin-bottom: 1px;">
-      <div class="bg-sec nav-header">Staged Changes</div>
+      <div class="bg-sec nav-header">Staged Changes ({{rd.staged.length}})</div>
       <div class="bg-sec bg-stage">
 
         <NoData v-if="rd.staged.length === 0" />
@@ -74,7 +74,10 @@ onMounted(() => {
           <div style="width: 18px; height: 18px;" class="fc">
             <SvgOf :name="mapChangeIcon(change.flag)" :width="18" :height="18" :color="mapChangeColor(change.flag)" />
           </div>
-          <div style="margin-left: .75rem;">{{change.file}}</div>
+<!--          <div style="margin-left: .75rem;">{{change.file}}</div>-->
+          <div class="mw100-text" style="margin-left: .75rem; color: var(--text-comment-color);">{{dirname(change.file)}}</div>
+          <div style="color: var(--text-comment-color);">{{(dirname(change.file).length === 0 ? '' : '/')}}</div>
+          <div>{{basename(change.file)}}</div>
           <div v-if="rd.staged[ci].hover" style="position: absolute; top: 0; right: 0; height: 100%; display: flex; align-items: center;">
             <div class="btn-stage" @click="() => {emit('clickUnstage', change.file)}" style="background-color: red;">Unstage</div>
           </div>
@@ -101,7 +104,8 @@ onMounted(() => {
   height: 2rem;
   width: 100%;
   box-sizing: border-box;
-  padding: 0 .75rem;
+  padding-left: .75rem;
+  //padding: 0 .75rem;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -142,12 +146,9 @@ textarea {
 
 .bg-stage {
   position: relative;
-  //background-color: var(--primary-background-color);
   padding: .75rem;
   box-sizing: border-box;
   width: 100%;
-  //width: calc(100% - 1.5rem);
-  //margin: .75rem;
   height: calc(100% - 2rem);
   overflow: auto;
 }

@@ -48,6 +48,7 @@ onMounted(() => {
 .raw-location {
   box-sizing: border-box;
   border-bottom: 1px solid #555;
+  color: yellowgreen;
 }
 
 .raw-code {

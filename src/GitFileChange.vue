@@ -12,7 +12,7 @@ const emit = defineEmits<{(event: 'close'): void}>()
 <template>
   <div class="container">
     <div class="bg-sec" style="display: flex; justify-content: space-between; align-items: center; height: calc(2rem - 1px); margin-bottom: 1px; box-sizing: border-box;">
-      <div style="box-sizing: border-box; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: .75rem;">{{change.file}}</div>
+      <div style="color: var(--text-comment-color); box-sizing: border-box; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-left: .75rem;">{{change.file}}</div>
       <div class="close-page fc state-hover" @click="() => {emit('close')}">
         <SvgOf name="close" :width="18" :height="18" color="#fff" />
       </div>

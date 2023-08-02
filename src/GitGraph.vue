@@ -2,7 +2,7 @@
 
 import {onMounted, reactive, ref} from "vue";
 // import gitTest from "./data/git-test.json"
-import {Graph, Node as GNode, Node2d, Path2d, preset, transparent} from "./ds-graph.ts";
+import {Graph, Node as GNode, Node2d, Path2d, preset, transparent} from "./git.graph.ts";
 import {GitCommit} from "./git.generic.ts";
 
 const props = defineProps<{history: Array<GitCommit>}>()
@@ -31,13 +31,21 @@ function selectCommit(id: string) {
 function processCommits(commits, graph) {
   graph.clear()
   blank.rowHeight = preset.rowGutter
-  for (let i = 0; i < commits.length; i++) {
-    const comm = commits[i]
-    graph.add(
+
+  commits
+      .map(comm => ([
         comm.idParent.trim().split(/[ \t]/).filter(s => s !== ''),
-        new GNode().setId(comm.id).setRef(comm))
-  }
-  graph.build()
+        new GNode().setId(comm.id).setRef(comm)]))
+      .map(tp => {graph.preload(tp[1]);return tp;})
+      .forEach(tp => graph.add(...tp))
+
+  // for (let i = 0; i < commits.length; i++) {
+  //   const comm = commits[i]
+  //   graph.add(
+  //       comm.idParent.trim().split(/[ \t]/).filter(s => s !== ''),
+  //       new GNode().setId(comm.id).setRef(comm))
+  // }
+  graph.build().check()
   graph.getPaths()
       .sort((a, b) => a.channel - b.channel)
       .forEach(p => blank.paths.push(p))
@@ -74,8 +82,16 @@ onMounted(async () => {
          :width="layout.width"
          :height="layout.height"
          :style="{width: `${layout.width}px`, height: `${layout.height}px`}">
+      <defs>
+        <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:dodgerblue;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:rgba(255,182,193,1);stop-opacity:1" />
+        </linearGradient>
+      </defs>
       <g>
-        <rect x="0" y="0" width="100%" :height="blank.rowHeight" fill="rgba(255,255,255,.05)"/>
+        <rect x="0" y="0" width="100%" :height="blank.rowHeight - 1"
+              fill="url('#rainbow')"/>
+<!--              fill="rgba(255,255,255,.04)"/>-->
         <foreignObject
             xmlns="http://www.w3.org/1999/xhtml"
             :x="0" :y="0"

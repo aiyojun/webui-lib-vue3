@@ -1,6 +1,7 @@
 import {invoke} from "./utils/rpc.ts";
 import {GitChange, GitCommit} from "./git.generic.ts";
 import {exists} from "./utils/jlib.ts";
+import {notify} from "./utils/libxdom.ts";
 
 export class GitRepository {
     name: string;
@@ -26,22 +27,29 @@ export class GitProject {
     remoteRepositories: Array<GitRepository> = [];
     tags: Array<string> = [];
     history: Array<GitCommit> = [];
+    track: Array<GitCommit> = [];
     changes: Array<GitChange> = [];
 
     currentChanges: Array<FileChange> = [];
 
     getCommit(id: string) {
-        for (let i = 0; i < this.history.length; i++) {
-            if (this.history[i].id === id)
-                return this.history[i]
+        for (let i = 0; i < this.track.length; i++) {
+            if (this.track[i].id === id)
+                return this.track[i]
         }
         return null
     }
 
-    async open() {
-        const r = await invoke('git_open_repo')
-        console.info("open : ", r)
-        return r
+    static jump(url: string) {
+        invoke('git_open_external', [url])
+    }
+
+    static async openAndEnter() {
+        const path = (await invoke('git_open_repo'))[0]
+        console.info("open : ", path)
+        if (!(await invoke('git_enter_repo', [path]))) {
+            notify({message: `Enter repo failed!`})
+        }
     }
 
     async ignore(filepath: string) {
@@ -134,8 +142,10 @@ export class GitProject {
             r.branches = rr[name]
             return r
         })
+        project.track = resp['track'].map(his => GitCommit.build(his))
         project.history = resp['history'].map(his => GitCommit.build(his))
-        project.changes = resp['changes'].map(chg => new GitChange(chg['flag'], chg['file']).setStaged(chg['staged']).setPlaces(chg['places']))
+        project.changes = resp['changes'].map(chg => new GitChange(chg['flag'], chg['file'])
+            .setStaged(chg['staged']).setPlaces(chg['places']))
         project.upstreams = resp['upstreams']
         return this
     }

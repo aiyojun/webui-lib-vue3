@@ -14,6 +14,15 @@
   --primary-background-color: #272727;/*#1d1d1d;*/
   --secondary-background-color: #333;/*#272727;*/
   --third-background-color: #383838;
+
+  --text-emphasize-color: #85a9ff;
+  --text-primary-color: #fff;
+  --text-secondary-color: #eee;
+  --text-third-color: #aaa;
+  --text-comment-color: #888;
+
+
+  /*--icon-color: #fff;*/
 }
 
 a {
@@ -27,6 +36,21 @@ a:hover {
 
 body {
   margin: 0;
+}
+
+.home {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--primary-background-color);
+  font-family: Roboto, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+.home > div {
+  width: 100%;
 }
 
 .overlay {
@@ -98,4 +122,10 @@ span.large {
 
 .state-hover-white:hover {
   fill: #fff;
+}
+
+.mw100-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

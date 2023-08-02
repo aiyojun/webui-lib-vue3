@@ -1,5 +1,6 @@
 import axios, {AxiosStatic} from "axios";
 import {exists} from "./jlib.ts";
+import {notify} from "./libxdom.ts";
 
 interface FakeAxios {
     get: (url: string) => Promise<any>;
@@ -8,10 +9,12 @@ interface FakeAxios {
 }
 
 export async function invoke(method: string, args: Array<any> = []): Promise<any> {
-    console.info("-- window['rpc'] :", window['rpc'])
     if (exists(window, 'rpc')) {
         const r = await window['rpc'].invoke(method, args)
-        console.info(`[rpc] run : ${method}; return : `, r)
+        console.info(`[RPC] ::${method}\n  -- args :`, args, ` \n  -- return :`, r)
+        if (exists(r, 'error')) {
+            notify({title: 'Git', message: r['error']})
+        }
         return r
     }
     let axios_ : FakeAxios | AxiosStatic = axios

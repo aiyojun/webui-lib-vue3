@@ -15,3 +15,15 @@ export function clone(o: any) {
 export function hash(o: any) {
     return CryptoJS.MD5(JSON.stringify(o)).toString()
 }
+
+export function dirname(path) {
+    path = path.replaceAll('\\', '/')
+    const arr = path.split('/').filter((s, i) => i === 0 || s !== '')
+    return arr.slice(0, arr.length - 1).join('/')
+}
+
+export function basename(path) {
+    path = path.replaceAll('\\', '/')
+    const arr = path.split('/').filter((s, i) => i === 0 || s !== '')
+    return arr.pop()
+}
