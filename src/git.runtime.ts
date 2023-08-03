@@ -16,18 +16,18 @@ export function exec(cmd: string): Promise<string> {
     })
 }
 
-export function execi(cmd: string): Promise<boolean> {
+export function execi(cmd: string, matches: Array<{question: string, answer: string}> = []): Promise<boolean> {
     return new Promise((resolve, reject) => {
         const child = child_process.exec(cmd)
         const err = {value: ''}
         child.stderr.on('data', (data) => {err.value += data + '\n'})
         child.stdout.on('data', (data) => {
-            if (data.toLowerCase().indexOf('username') > -1) {
-                child.stdin.write(`${globalConfig.ref['user']['name']}\n`, 'utf-8')
-            } else if (data.toLowerCase().indexOf('password') > -1) {
-                child.stdin.write(`${globalConfig.ref['user']['password']}\n`, 'utf-8')
-            } else if (data.toLowerCase().indexOf('mail') > -1) {
-                child.stdin.write(`${globalConfig.ref['user']['email']}\n`, 'utf-8')
+            for (let i = 0; i < matches.length; i++) {
+                const match = matches[i]
+                if (data.toLowerCase().indexOf(match.question) !== -1) {
+                    child.stdin.write(`${match.answer}\n`, 'utf-8')
+                    break
+                }
             }
         })
         child.on('exit', (code) => {
@@ -37,10 +37,10 @@ export function execi(cmd: string): Promise<boolean> {
 }
 
 export async function git_open_repo(): Promise<Array<string>> {
-    return (await dialog.showOpenDialog({
+    return ((await dialog.showOpenDialog({
         title: "GitGuard",
         properties: ['openDirectory']
-    }))['filePaths']
+    })) || {filePaths: []})['filePaths']
     // // Just for test
     // return ["C:\\jqs\\dataflow"]
 }
@@ -54,35 +54,39 @@ export function git_enter_repo(path) {
     return process.cwd() === path
 }
 
-export async function git_branch() {
-    const message = await exec('git branch')
-    const branch = {branches: [], currentBranch: null}
-    message.split('\n').forEach(line => {
-        let br = line.trim()
-        if (br.length === 0) return
-        if (br.startsWith('*')) {
-            br = br.substring(1).trim()
-            branch.currentBranch = br
-        }
-        branch.branches.push(br)
-    })
+export async function getBranches() {
+    const branch = {branches: [], currentBranch: null};
+    (await exec('git branch'))
+        .split('\n')
+        .filter(s => s.trim() !== '')
+        .forEach(line => {
+            let br = line.trim()
+            if (line.startsWith('*')) {
+                br = line.substring(1).trim()
+                branch.currentBranch = br
+            }
+            branch.branches.push(br)
+        })
     return branch
 }
 
-export async function git_branch_vv() {
-    const message = await exec('git branch -avv --format="%(refname:short) %(objectname)"')
-    const r = {}
-    message.split('\n').filter(s => s.trim() !== '').forEach(line => {
-        const arr = line.split(' ')
-        r[arr[0]] = arr[1]
-    })
-    return r
+export async function getFinalCommits() {
+    return (await exec('git branch -avv --format="%(refname:short) %(objectname)"'))
+        .split('\n')
+        .filter(s => s.trim() !== '')
+        .map(line => line.split(' '))
+        .filter(arr => arr.length === 2)
+        .reduce((prev, c) =>
+            ({...prev, [c[0]]: c[1]}), {})
 }
 
-export async function git_branch_r() {
+/**
+ * @deprecated
+ */
+export async function getBranches_r() {
     const message = await exec('git branch -r')
     const lines = message.split('\n')
-    const r = {}//new Map<string, Set<string>>()
+    const r = {}
     lines.forEach(line => {
         if (line.trim().length === 0)
             return
@@ -93,9 +97,6 @@ export async function git_branch_r() {
         if (!exists(r, arr[0]))
             r[arr[0]] = []
         r[arr[0]].push(arr[1])
-        // if (!r.has(arr[0]))
-        //     r.set(arr[0], new Set<string>())
-        // r.get(arr[0]).add(arr[1])
     })
     return r
 }
@@ -105,9 +106,10 @@ export function enter(dir: string) {
 }
 
 export async function git_info() {
+    // Just for test
     // enter('C:\\gitlab\\widget-frontend')
 
-    const br = await git_branch()
+    const br = await getBranches()
     const diffs = await git_diff()
     const diffsMap = new Map<string, GitChange>()
     diffs.forEach(df => diffsMap.set(df.file, df))
@@ -122,11 +124,11 @@ export async function git_info() {
         "currentBranch": br.currentBranch,
         "upstreams": upstreams,
         "localBranches": br.branches,
-        "remoteRepositories": await git_branch_r(),
+        "remoteRepositories": await getBranches_r(),
         "history": await git_log(),
         "track": await git_log('--all'),
         "changes": changes,
-        "heads": await git_branch_vv(),
+        "heads": await getFinalCommits(),
     }
 }
 
@@ -163,21 +165,25 @@ export async function git_commit(msg: string) {
 }
 
 export async function git_push(remote: string = '', branch: string = '') {
-    // TODO: ...
-    return await execi(remote !== '' && branch !== '' ? `git push --set-upstream ${remote} ${branch}` : "git push")
+
+    return await execi(
+        remote !== '' && branch !== '' ? `git push --set-upstream ${remote} ${branch}` : "git push",
+        [
+            {question: 'username', answer: globalConfig.ref['user']['name']},
+            {question: 'password', answer: globalConfig.ref['user']['password']},
+            {question: 'mail', answer: globalConfig.ref['user']['mail']},
+        ])
 }
 
 const globalConfig = {ref: null}
 
 export async function git_pull(remote: string = '', branch: string = '') {
-    // TODO: ...
-    return await execi(remote !== '' && branch !== '' ? `git pull --set-upstream ${remote} ${branch}` : "git pull")
-    // try {
-    //     const message = await exec(cmd)
-    //     return true
-    // } catch (e) {
-    //     return {error: e.toString()}
-    // }
+    return await execi(remote !== '' && branch !== '' ? `git pull --set-upstream ${remote} ${branch}` : "git pull",
+        [
+            {question: 'username', answer: globalConfig.ref['user']['name']},
+            {question: 'password', answer: globalConfig.ref['user']['password']},
+            {question: 'mail', answer: globalConfig.ref['user']['mail']},
+        ])
 }
 
 export async function git_reset() {
@@ -189,6 +195,9 @@ export async function git_reset() {
     }
 }
 
+/**
+ * @deprecated use git_config_list as replacement
+ */
 export function git_parse_config() {
     const r = {upstreams: {},}
     const configs = fs.readFileSync(path.join('.git', 'config')).toString()
@@ -235,27 +244,21 @@ export async function git_show(id: string) {
     const message = await exec(`git show ${id}`)
     let i = 0; let count = 0;
     const diffs = []
-    // console.info(`\n\ngit show .... ${message.split('diff --git').length}\n\n`)
     while (i < message.length) {
         const p0 = message.substring(i).indexOf('\ndiff ')
         const p1 = message.substring(i + p0 + 1).indexOf('\ndiff ')
         if (p0 === -1) break
         const text = ((p1 === -1) ? message.substring(i + p0 + 1) : message.substring(i + p0 + 1, i + p0 + 1 + p1));
-        // console.info(`\ndiff : ${text}`)
         diffs.push(text)
         i = ((p1 === -1) ? message.length : (i + p0 + 1 + p1))
-        // const p = message.substring(i).indexOf('\ndiff ')
-        // if (p === -1) break
-        // const text = message.substring(i, i + p)
-        // // if (text === '') break
-        // count++
-        // if (count !== 1) diffs.push(text)
-        // i += p + 1
     }
-    // console.info(`\n\n\ndiff size : ${diffs.length}\n\n\n`)
     return diffs.map(d => GitChange.parse(d))
 }
 
+
+/**
+ * @deprecated use git_status_v2 as replacement
+ */
 export async function git_status() {
     /*
 M packages/widget-frontend-beta/src/widgets-base/element-ui.tsx
@@ -266,12 +269,12 @@ M pub.js
     const lines = message.split('\n')
         .map(m => m.trim())
         .filter(m => m.length !== 0)
-    return lines.map(line => (
-        new GitChange(line[0], line.substring(1).trim())
-        // {flag: line[0], file: line.substring(1).trim()}
-    ))
+    return lines.map(line => (new GitChange(line[0], line.substring(1).trim())))
 }
 
+/**
+ * @deprecated useless
+ */
 function searchUntil(_lines: Array<string>, _i: number, _option: string, _arr: Array<string>) {
     let intercept = false
     for (let j = _i; j < _lines.length; j++) {
@@ -332,6 +335,9 @@ export async function git_status_v2(): Promise<Array<GitChange>> {
     return [...status.staged, ...status.unstaged, ...status.untracked]
 }
 
+/**
+ * @deprecated use git_config_list as replacement
+ */
 export async function git_remote() {
     const message = await exec('git remote -v')
     const lines = message.split('\n').map(m => m.trim()).filter(m => m.length !== 0)
@@ -343,12 +349,17 @@ export async function git_remote() {
     return remotes
 }
 
+/**
+ * Obtain current changing states of all files
+ */
 export async function git_diff(path?: string) {
     return GitChange.parseDiffs(await exec(`git diff ${path || ''}`))
 }
 
 
-
+/**
+ * Todo: stash implementation
+ */
 export async function git_stash() {
     // git stash -m "..."
     // git stash list
@@ -359,24 +370,7 @@ export async function git_stash() {
 }
 
 
-
-class JFile {
-    text: string = ''
-    constructor(readonly path) {
-
-    }
-    append(text: string) {
-        this.text += text + "\n"
-        return this
-    }
-    print() {
-        console.info(this.text)
-    }
-    flush() {
-        fs.writeFileSync(this.path, this.text)
-    }
-}
-
+// whether we need?
 export async function git_fetch() {}
 export async function git_merge() {}
 
@@ -437,30 +431,6 @@ export async function git_config_list() {
     globalConfig.ref = cfg
     return cfg
 }
-
-
-// export async function ask(): Promise<number> {
-//     return new Promise((resolve, reject) => {
-//         const interactive = 'python ./main.py'
-//         const child = child_process.exec(interactive)
-//         child.stdout.on('data', (data) => {
-//             console.info("stdout :", data)
-//             if (data.indexOf('username') > -1) {
-//                 child.stdin.write('aaa\n', 'utf-8')
-//             } else if (data.indexOf('password') > -1) {
-//                 child.stdin.write('bbb\n', 'utf-8')
-//             }
-//         })
-//         child.on('exit', (code) => {
-//             resolve(code)
-//         })
-//     })
-// }
-//
-// console.info(`ask...`)
-// console.info(await ask())
-// console.info(`ask...over`)
-// console.info(JSON.stringify(await git_config_list(), null, 2))
 
 export async function invoke(method: string, args: Array<any>) {
     const rpcHandles = [
