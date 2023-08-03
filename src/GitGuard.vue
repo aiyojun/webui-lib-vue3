@@ -1,10 +1,10 @@
 <script setup lang="ts">
 
-import {onMounted, reactive} from "vue";
+import {onMounted, reactive, ref} from "vue";
 import {GitProject} from "./git.web.ts";
 import SvgOf from "./ui/SvgOf.vue";
 import GitGraph from "./GitGraph.vue";
-import {hash} from "./utils/jlib.ts";
+import {hash, kvexchange} from "./utils/jlib.ts";
 import GitStage from "./GitStage.vue";
 import GitRecord from "./GitRecord.vue";
 import {notify} from "./utils/libxdom.ts";
@@ -15,9 +15,12 @@ import SvgPos from "./assets/location.svg"
 import GitRecent from "./GitRecent.vue";
 
 const info = reactive<{ g: GitProject }>({g: null})
-const menu = reactive({currentBranch: false, remoteRepositories: false})
 const xGui = reactive<{ md5: string, showTrack: boolean, record: any, changedFile: any }>(
-    {md5: '', showTrack: false, record: null, changedFile: null})
+    {md5: '', showTrack: false, record: null, changedFile: null,})
+const xTargetFormGroup = reactive({show: false, type: 'pull'})
+const xTargetForm = ref<HTMLDivElement>()
+const xTargetFormRemote = ref<HTMLSelectElement>()
+const xTargetFormBranch = ref<HTMLInputElement>()
 const recentRepositories = reactive([])
 function convertRemote(gp: GitProject) {
   return gp.remoteRepositories.map(repo => ({
@@ -42,6 +45,49 @@ async function init() {
   info.g = reactive(await GitProject.build())
 }
 
+async function pull() {
+  xTargetFormGroup.type = 'pull'
+  xTargetFormBranch.value.value = ''
+  if (!info.g.hasUpstream()) {
+    xTargetFormGroup.show = true
+    xTargetForm.value.style.left = '0'
+    xTargetForm.value.style.animation = 'bounceInLeft .8s'
+  } else {
+    await info.g.pull();
+    notify({message: 'Pull success!'})
+  }
+}
+
+async function push() {
+  xTargetFormGroup.type = 'push'
+  xTargetFormBranch.value.value = ''
+  if (!info.g.hasUpstream()) {
+    xTargetFormGroup.show = true
+    xTargetForm.value.style.left = '0'
+    xTargetForm.value.style.animation = 'bounceInLeft .8s'
+  } else {
+    await info.g.push();
+    notify({message: 'Push success!'})
+  }
+}
+
+async function targetConfirm() {
+  console.info(`-- confirm : ${xTargetFormGroup.type} remote : ${xTargetFormRemote.value.value} branch : ${xTargetFormBranch.value.value}`)
+  if (xTargetFormGroup.type === 'pull') {
+    await info.g.pull()
+  } else if (xTargetFormGroup.type === 'push') {
+    await info.g.push()
+  }
+  notify({message: `${xTargetFormGroup.type} success!`})
+  xTargetForm.value.style.animation = 'bounceOutRight .8s'
+  setTimeout(() => xTargetFormGroup.show = false, 750)
+}
+
+function targetCancel() {
+  xTargetForm.value.style.animation = 'bounceOutLeft .8s'
+  setTimeout(() => xTargetFormGroup.show = false, 750)
+}
+
 onMounted(async () => {
   (await GitProject.getRecent()).forEach(repo => recentRepositories.push(repo))
 
@@ -56,7 +102,7 @@ onMounted(async () => {
 <template>
   <div class="home" :key="info.g?.name || 'nothing'">
     <div class="header">
-      <div style="width: 100%;">
+      <div v-if="!xTargetFormGroup.show" style="width: 100%;">
         <div class="header-btn fc" @click="async () => {await GitProject.openAndEnter(); await init()}">
           <SvgOf name="folder" :width="20" :height="20" color="var(--text-primary-color)"/>
         </div>
@@ -71,11 +117,11 @@ onMounted(async () => {
             <div style="margin-left: .5rem; margin-right: .5rem;">{{ info.g.currentBranch }}</div>
             <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>
           </HeadMenu>
-          <div class="header-btn fc" @click="async () => {await info.g.pull(); notify({message: 'Pull success!'})}">
+          <div class="header-btn fc" @click="pull">
             <SvgOf name="download" :width="14" :height="14" color="var(--text-third-color)"/>
             <div style="margin-left: .5rem; margin-right: .5rem;">Pull</div>
           </div>
-          <div class="header-btn fc" @click="async () => {await info.g.push(); notify({message: 'Push success!'})}">
+          <div class="header-btn fc" @click="push">
             <SvgOf name="upload" :width="14" :height="14" color="var(--text-third-color)"/>
             <div style="margin-left: .5rem; margin-right: .5rem;">Push</div>
           </div>
@@ -87,15 +133,6 @@ onMounted(async () => {
             <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>
           </HeadMenu>
 
-<!--          <div class="header-btn fc" @click="() => menu.remoteRepositories = !menu.remoteRepositories">-->
-<!--            <SvgOf name="cloud" :width="18" :height="18" color="var(&#45;&#45;text-third-color)"/>-->
-<!--            <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>-->
-<!--            <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(&#45;&#45;text-third-color)"/>-->
-<!--            <div class="btn-menu" v-if="menu.remoteRepositories">-->
-<!--              <div v-for="(repo) in info.g.remoteRepositories"-->
-<!--                   class="btn-menu-item state-hover">{{repo.name}}</div>-->
-<!--            </div>-->
-<!--          </div>-->
           <div class="header-btn fc" @click="() => {xGui.showTrack = !xGui.showTrack; notify({message: xGui.showTrack ? 'Whole commits!' : 'Current branch commits!'})}">
             <SvgOf name="branch-child" :width="14" :height="14" color="var(--text-third-color)"/>
             <div style="margin-left: .5rem; margin-right: .5rem;">{{xGui.showTrack ? 'Branch' : 'History'}}</div>
@@ -103,7 +140,6 @@ onMounted(async () => {
         </div>
         <div style="height: 100%; width: 100%; -webkit-app-region: drag;"></div>
       </div>
-
 
       <div style="margin-right: 140px;">
         <div v-if="info.g !== null" class="header-btn fc" @click="() => {reload()}">
@@ -115,6 +151,18 @@ onMounted(async () => {
         <div class="header-btn fc">
           <SvgOf name="settings" :width="18" :height="18" color="var(--text-third-color)"/>
         </div>
+      </div>
+
+
+      <div v-if="info.g !== null" ref="xTargetForm" class="git-target fc" :style="{left: xTargetFormGroup.show ? '0' : '100%'}">
+        <div style="margin-right: .5rem;">Which remote/branch {{xTargetFormGroup.type}} {{xTargetFormGroup.type === 'pull' ? 'from' : 'to'}}?</div>
+        <select style="width: 8rem;" ref="xTargetFormRemote">
+          <option v-for="remote in [{name: 'origin'}, {name: 'dev'}]" :value="remote.name">{{remote.name}}</option>
+        </select>
+        <div style="margin: 0 .5rem;">/</div>
+        <input style="width: 8rem; margin-right: .5rem;" ref="xTargetFormBranch">
+        <div style="margin-right: .5rem;" class="git-target-button confirm" @click="() => {targetConfirm()}">Confirm</div>
+        <div class="git-target-button cancel" @click="targetCancel">Cancel</div>
       </div>
     </div>
     <div class="main">
@@ -138,10 +186,10 @@ onMounted(async () => {
                        :change="xGui.changedFile"
                        @close="() => {xGui.changedFile = null}" />
         <GitGraph v-else-if="!xGui.showTrack" :key="hash(info.g.history) + xGui.md5"
-                  :history="info.g.history"
+                  :history="info.g.history" :heads="kvexchange(info.g.heads)"
                   @select="selectCommit"/>
         <GitGraph v-else-if="xGui.showTrack" :key="hash(info.g.track) + xGui.md5"
-                  :history="info.g.track"
+                  :history="info.g.track" :heads="kvexchange(info.g.heads)"
                   @select="selectCommit"/>
 
       </div>
@@ -265,5 +313,60 @@ onMounted(async () => {
   padding: 0 .75rem;
 }
 
+.git-target {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  height: 100%;
+  width: 100%;
+  color: #fff;
+  background-color: #2468a2;
+}
+
+input, select {
+  outline: none;
+  box-sizing: border-box;
+  padding: 0 .5rem;
+  border: none;
+  border-radius: 4px;
+  height: 2rem;
+  background-color: #205686;
+  font-family: Roboto, system-ui, Avenir, Helvetica, Arial, "Microsoft YaHei", sans-serif;
+  font-size: .75rem;
+}
+
+select {
+  cursor: pointer;
+}
+
+.git-target-button {
+  height: 2rem;
+  line-height: 2rem;
+  padding: 0 .5rem;
+  color: #fff;
+  background-color: rgba(124, 252, 0, 0.5);
+  border: 1px solid yellowgreen;
+  border-radius: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.confirm {
+  background-color: rgba(124, 252, 0, 0.5);
+  border: 1px solid yellowgreen;
+}
+
+.confirm:hover {
+  background-color: yellowgreen;
+}
+
+.cancel {
+  background-color: rgba(128, 128, 128, 0.5);
+  border: 1px solid darkgrey;
+}
+
+.cancel:hover {
+  background-color: darkgrey;
+}
 
 </style>

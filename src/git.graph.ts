@@ -107,6 +107,7 @@ export const preset = {
     strokeWidth: 1.8,
     lineRadius: 10,
     graphMinWidth: 200,
+    headWidth: 80,
 }
 
 function printNode(n: Node) {

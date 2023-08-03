@@ -29,6 +29,7 @@ export class GitProject {
     history: Array<GitCommit> = [];
     track: Array<GitCommit> = [];
     changes: Array<GitChange> = [];
+    heads: Record<string, string> = {};
 
     currentChanges: Array<FileChange> = [];
 
@@ -88,17 +89,26 @@ export class GitProject {
         }
     }
 
-    async pull() {
-        if (exists(this.upstreams, this.currentBranch))
-            await invoke('git_pull')
-        else
-            console.info(`... git pull --set-upstream remote branch`)
+    hasUpstream() {
+        return exists(this.upstreams, this.currentBranch)
     }
-    async push() {
-        if (exists(this.upstreams, this.currentBranch))
-            await invoke('git_push')
-        else
-            console.info(`... git push --set-upstream remote branch`)
+
+    async pull(remote: string = '', branch: string = '') {
+        if (remote !== '' && branch !== '')
+            return await invoke('git_pull', [remote, branch])
+        return await invoke('git_pull')
+        // if (exists(this.upstreams, this.currentBranch))
+        // else
+        //     console.info(`... git pull --set-upstream remote branch`)
+    }
+    async push(remote: string = '', branch: string = '') {
+        if (remote !== '' && branch !== '')
+            return await invoke('git_push', [remote, branch])
+        return await invoke('git_push')
+        // if (exists(this.upstreams, this.currentBranch))
+        //     await invoke('git_push')
+        // else
+        //     console.info(`... git push --set-upstream remote branch`)
     }
 
     async commit(message: string) {
@@ -157,6 +167,7 @@ export class GitProject {
         project.changes = resp['changes'].map(chg => new GitChange(chg['flag'], chg['file'])
             .setStaged(chg['staged']).setPlaces(chg['places']))
         project.upstreams = resp['upstreams']
+        project.heads = resp['heads']
         return this
     }
 

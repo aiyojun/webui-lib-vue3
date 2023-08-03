@@ -16,6 +16,26 @@ export function exec(cmd: string): Promise<string> {
     })
 }
 
+export function execi(cmd: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        const child = child_process.exec(cmd)
+        const err = {value: ''}
+        child.stderr.on('data', (data) => {err.value += data + '\n'})
+        child.stdout.on('data', (data) => {
+            if (data.toLowerCase().indexOf('username') > -1) {
+                child.stdin.write(`${globalConfig.ref['user']['name']}\n`, 'utf-8')
+            } else if (data.toLowerCase().indexOf('password') > -1) {
+                child.stdin.write(`${globalConfig.ref['user']['password']}\n`, 'utf-8')
+            } else if (data.toLowerCase().indexOf('mail') > -1) {
+                child.stdin.write(`${globalConfig.ref['user']['email']}\n`, 'utf-8')
+            }
+        })
+        child.on('exit', (code) => {
+            code !== 0 ? reject(err.value) : resolve(true)
+        })
+    })
+}
+
 export async function git_open_repo(): Promise<Array<string>> {
     return (await dialog.showOpenDialog({
         title: "GitGuard",
@@ -47,6 +67,16 @@ export async function git_branch() {
         branch.branches.push(br)
     })
     return branch
+}
+
+export async function git_branch_vv() {
+    const message = await exec('git branch -avv --format="%(refname:short) %(objectname)"')
+    const r = {}
+    message.split('\n').filter(s => s.trim() !== '').forEach(line => {
+        const arr = line.split(' ')
+        r[arr[0]] = arr[1]
+    })
+    return r
 }
 
 export async function git_branch_r() {
@@ -96,6 +126,7 @@ export async function git_info() {
         "history": await git_log(),
         "track": await git_log('--all'),
         "changes": changes,
+        "heads": await git_branch_vv(),
     }
 }
 
@@ -131,37 +162,22 @@ export async function git_commit(msg: string) {
     }
 }
 
-export async function git_push() {
+export async function git_push(remote: string = '', branch: string = '') {
     // TODO: ...
-    try {
-        const message = await exec(`git push`)
-        return true
-    } catch (e) {
-        return false
-    }
+    return await execi(remote !== '' && branch !== '' ? `git push --set-upstream ${remote} ${branch}` : "git push")
 }
 
-export async function git_pull() {
+const globalConfig = {ref: null}
+
+export async function git_pull(remote: string = '', branch: string = '') {
     // TODO: ...
-    // return new Promise((resolve, reject) => {
-    //     const child = child_process.exec(`git pull`)
-    //     child.stdout.on('data', (data) => {
-    //         if (data.toLowerCase().indexOf('username') > -1) {
-    //             child.stdin.write(`${}\n`, 'utf-8')
-    //         } else if (data.toLowerCase().indexOf('password') > -1) {
-    //             child.stdin.write(`${}\n`, 'utf-8')
-    //         }
-    //     })
-    //     child.on('exit', (code) => {
-    //         resolve(code)
-    //     })
-    // })
-    try {
-        const message = await exec(`git pull`)
-        return true
-    } catch (e) {
-        return false
-    }
+    return await execi(remote !== '' && branch !== '' ? `git pull --set-upstream ${remote} ${branch}` : "git pull")
+    // try {
+    //     const message = await exec(cmd)
+    //     return true
+    // } catch (e) {
+    //     return {error: e.toString()}
+    // }
 }
 
 export async function git_reset() {
@@ -196,7 +212,7 @@ export function git_parse_config() {
 export async function git_log(options: string=''): Promise<Array<GitCommit>> {
     const log = await exec(`git log ${options} --date=iso --pretty=format:%Creset+++%T%Creset+++%P%Creset+++%H%Creset+++%an%Creset+++%ae%Creset+++%ad%Creset+++%s`)
     if (!log.startsWith('+++')) {
-        console.error('error git log : ', log)
+        // console.error('error git log : ', log)
         return []
     }
     return log.split('\n').map(line => {
@@ -219,13 +235,13 @@ export async function git_show(id: string) {
     const message = await exec(`git show ${id}`)
     let i = 0; let count = 0;
     const diffs = []
-    console.info(`\n\ngit show .... ${message.split('diff --git').length}\n\n`)
+    // console.info(`\n\ngit show .... ${message.split('diff --git').length}\n\n`)
     while (i < message.length) {
         const p0 = message.substring(i).indexOf('\ndiff ')
         const p1 = message.substring(i + p0 + 1).indexOf('\ndiff ')
         if (p0 === -1) break
         const text = ((p1 === -1) ? message.substring(i + p0 + 1) : message.substring(i + p0 + 1, i + p0 + 1 + p1));
-        console.info(`\ndiff : ${text}`)
+        // console.info(`\ndiff : ${text}`)
         diffs.push(text)
         i = ((p1 === -1) ? message.length : (i + p0 + 1 + p1))
         // const p = message.substring(i).indexOf('\ndiff ')
@@ -236,7 +252,7 @@ export async function git_show(id: string) {
         // if (count !== 1) diffs.push(text)
         // i += p + 1
     }
-    console.info(`\n\n\ndiff size : ${diffs.length}\n\n\n`)
+    // console.info(`\n\n\ndiff size : ${diffs.length}\n\n\n`)
     return diffs.map(d => GitChange.parse(d))
 }
 
@@ -361,8 +377,6 @@ class JFile {
     }
 }
 
-// export async function git_pull() {}
-// export async function git_push() {}
 export async function git_fetch() {}
 export async function git_merge() {}
 
@@ -420,6 +434,7 @@ export async function git_config_list() {
         const value = line.substring(eqi + 1)
         set(key, value)
     })
+    globalConfig.ref = cfg
     return cfg
 }
 
@@ -457,8 +472,8 @@ export async function invoke(method: string, args: Array<any>) {
         {id: 'git_reset', hd: async (...args) => await git_reset()},
         {id: 'git_show', hd: async (...args) => await git_show(args[0])},
         {id: 'git_commit', hd: async (...args) => await git_commit(args[0])},
-        {id: 'git_push', hd: async (...args) => await git_push()},
-        {id: 'git_pull', hd: async (...args) => await git_pull()},
+        {id: 'git_push', hd: async (...args) => await git_push(...args)},
+        {id: 'git_pull', hd: async (...args) => await git_pull(...args)},
         {id: 'git_open_repo', hd: async (...args) => await git_open_repo()},
         {id: 'git_enter_repo', hd: async (...args) => git_enter_repo(args[0])},
         {id: 'git_open_external', hd: (...args) => git_open_external(args[0])},

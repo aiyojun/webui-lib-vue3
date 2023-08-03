@@ -4,8 +4,9 @@ import {onMounted, reactive, ref} from "vue";
 // import gitTest from "./data/git-test.json"
 import {Graph, Node as GNode, Node2d, Path2d, preset, transparent} from "./git.graph.ts";
 import {GitCommit} from "./git.generic.ts";
+import {exists} from "./utils/jlib.ts";
 
-const props = defineProps<{history: Array<GitCommit>}>()
+const props = defineProps<{history: Array<GitCommit>; heads: Record<string, string>}>()
 const emit = defineEmits<{(event: 'select', value: string)}>()
 
 const graph = new Graph()
@@ -137,6 +138,20 @@ onMounted(async () => {
             :stroke-width="path.strokeWidth"
             style="pointer-events: none;" />
       <g v-for="(node) in blank.nodes">
+        <line v-if="exists(heads, node.id)"
+              :x1="5+preset.headWidth" :x2="node.x"
+              :y1="node.y - blank.rowHeight * 0.5 + 2 + (blank.rowHeight - 4) * .5"
+              :y2="node.y - blank.rowHeight * 0.5 + 2 + (blank.rowHeight - 4) * .5"
+              :stroke="transparent(node.fill, 1)" :stroke-width="preset.strokeWidth"
+        />
+        <foreignObject v-if="exists(heads, node.id)"
+                       :x="5" :y="node.y - blank.rowHeight * 0.5 + 2"
+                       :width="preset.headWidth" :height="blank.rowHeight - 4"
+                       xmlns="http://www.w3.org/1999/xhtml">
+          <div class="head-pointer fc" :style="{backgroundColor: transparent(node.fill, 1)}">
+            {{heads[node.id]}}
+          </div>
+        </foreignObject>
         <circle v-if="node.type === 'merge'"
                 :cx="node.x" :cy="node.y" r="6" :fill="node.fill"
                 style="pointer-events: none;" />
@@ -180,6 +195,19 @@ onMounted(async () => {
 
 .git-row:hover {
   fill: rgba(51, 51, 51, 0.5);
+}
+
+.head-pointer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--text-primary-color);
+  text-align: center;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 </style>

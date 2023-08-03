@@ -27,3 +27,7 @@ export function basename(path) {
     const arr = path.split('/').filter((s, i) => i === 0 || s !== '')
     return arr.pop()
 }
+
+export function kvexchange(o: object) {
+    return Object.entries(o).reduce((prev, e) => ({...prev, [e[1]]: e[0]}), {})
+}
