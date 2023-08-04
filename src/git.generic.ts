@@ -49,8 +49,6 @@ export class GitChange {
             return new GitChange(extractFlag(text), filepath)
         }
         const [section0, section_0] = text.split('\n--- ')
-        // console.info(`parse one diff : ${text}`)
-        console.info(`section_0 : ${section_0}`)
         const [_, section_1] = section_0.split('\n+++ ')
         const [__, ...lines] = section_1.split('\n')
 

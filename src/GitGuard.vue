@@ -27,6 +27,15 @@ function convertRemote(gp: GitProject) {
     name: repo.name, children: repo.branches.map(br => ({name: br}))}))
 }
 
+function convertRemoteMenu(remotes) {
+  return remotes.map(repo => ({
+    name: repo.name,
+    children: repo.branches.map(br => ({name: br, children: [
+        {name: "Pull"},
+      ]})),
+  }))
+}
+
 async function selectCommit(id) {
   xGui.record = {commit: info.g.getCommit(id), changes: await (info.g.showCommit(id))}
   console.info(`select commit ${id.substring(0, 4)}`)
@@ -127,7 +136,7 @@ onMounted(async () => {
           </div>
 
 
-          <HeadMenu :items="info.g.remoteRepositories.map(rr => rr.name)" @clickMenu="(rr) => {}">
+          <HeadMenu :items="convertRemoteMenu(info.g.remoteRepositories)" @clickMenu="(rr) => {}">
             <SvgOf name="cloud" :width="18" :height="18" color="var(--text-third-color)"/>
             <div style="margin-left: .5rem; margin-right: .5rem;">Remote</div>
             <SvgOf name="small-arrow-down" :width="10" :height="10" color="var(--text-third-color)"/>
@@ -306,6 +315,7 @@ onMounted(async () => {
 }
 
 .btn-menu-item {
+
   height: 2rem;
   box-sizing: border-box;
   display: flex;
