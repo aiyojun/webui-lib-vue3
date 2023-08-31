@@ -1,4 +1,4 @@
-import {invoke} from "./utils/rpc.ts";
+import {invoke} from "./rpc.ts";
 import {GitChange, GitCommit} from "./git.generic.ts";
 import {exists} from "./utils/jlib.ts";
 import {notify} from "./utils/libxdom.ts";
@@ -49,13 +49,13 @@ export class GitProject {
         const path = (await invoke('git_open_repo'))[0]
         console.info("open : ", path)
         if (!(await invoke('git_enter_repo', [path]))) {
-            notify({message: `Enter repo [${path}] failed!`})
+            // notify({message: `Enter repo [${path}] failed!`})
         }
     }
 
     static async enter(path: string) {
         if (!(await invoke('git_enter_repo', [path]))) {
-            notify({message: `Enter repo [${path}] failed!`})
+            // notify({message: `Enter repo [${path}] failed!`})
         }
     }
 

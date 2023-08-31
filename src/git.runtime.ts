@@ -372,27 +372,27 @@ export async function git_merge() {
 
 export async function invoke(method: string, args: Array<any>) {
     const rpcHandles = [
-        {id: 'git_info', hd: async (...args) => await getProject()},
-        {id: 'git_checkout', hd: async (...args) => await checkout(args[0])},
-        {id: 'git_ignore', hd: async (...args) => await gitIgnore(args[0])},
-        {id: 'git_add', hd: async (...args) => await gitAdd(args[0])},
-        {id: 'git_unstage', hd: async (...args) => await gitUnstage(args[0])},
-        // {id: 'git_reset', hd: async (...args) => await gitReset()},
-        {id: 'git_show', hd: async (...args) => await gitShow(args[0])},
-        {id: 'git_commit', hd: async (...args) => await gitCommit(args[0])},
-        {id: 'git_push', hd: async (...args) => await gitPush(...args)},
-        {id: 'git_pull', hd: async (...args) => await gitPull(...args)},
-        {id: 'git_recent', hd: async (...args) => getRecent()},
+        {id: 'git_info'     , hd: async (...args) => await getProject()},
+        {id: 'git_checkout' , hd: async (...args) => await checkout(args[0])},
+        {id: 'git_ignore'   , hd: async (...args) => await gitIgnore(args[0])},
+        {id: 'git_add'      , hd: async (...args) => await gitAdd(args[0])},
+        {id: 'git_unstage'  , hd: async (...args) => await gitUnstage(args[0])},
+        {id: 'git_show'     , hd: async (...args) => await gitShow(args[0])},
+        {id: 'git_commit'   , hd: async (...args) => await gitCommit(args[0])},
+        {id: 'git_push'     , hd: async (...args) => await gitPush(...args)},
+        {id: 'git_pull'     , hd: async (...args) => await gitPull(...args)},
+        {id: 'git_recent'   , hd: async (...args) => getRecent()},
         {id: 'git_open_repo', hd: async (...args) => await getOpenPaths()},
-        {id: 'git_enter_repo', hd: async (...args) => enterPath(args[0])},
-        {id: 'git_add_recent', hd: async (...args) => addRecent(args[0])},
+        {id: 'git_enter_repo'   , hd: async (...args) => enterPath(args[0])},
+        {id: 'git_add_recent'   , hd: async (...args) => addRecent(args[0])},
         {id: 'git_open_external', hd: (...args) => openExternalLink(args[0])},
     ]
     for (let i = 0; i < rpcHandles.length; i++) {
         if (method === rpcHandles[i].id) {
-            console.info(`[gitx] run : ${method}`)
             try {
-                return await (rpcHandles[i].hd(...args))
+                const r = await (rpcHandles[i].hd(...args))
+                console.info(`[Git] ${method}(${args.map(a => a.toString()).join(',')}) ->`, r)
+                return r
             } catch (e) {
                 console.error(e)
                 return {error: e.toString()}
