@@ -391,7 +391,7 @@ export async function invoke(method: string, args: Array<any>) {
         if (method === rpcHandles[i].id) {
             try {
                 const r = await (rpcHandles[i].hd(...args))
-                console.info(`[Git] ${method}(${args.map(a => a.toString()).join(',')}) ->`, r)
+                console.info(`[Git] ${method}(${args.map(a => a.toString()).join(',')}) ->`, JSON.stringify(r).length > 50 ? (JSON.stringify(r).substring(0, 12) + '... ...') : r)
                 return r
             } catch (e) {
                 console.error(e)
