@@ -23,7 +23,6 @@ export class GitChange {
     }
 
     static parseDiffs(text: string): Array<GitChange> {
-        const files = []
         return text.split('\ndiff ')
             .filter(x => x.trim() !== '')
             .map((x, i) => i === 0 ? x : ('diff ' + x))
@@ -39,12 +38,9 @@ export class GitChange {
                 flag = _text.split(' mode ')[0].split('\n').pop()
             return flag
         }
-        // Error: Unsolved diff text: diff --git a/src/widgets-buildin/index.tsx b/src/widgets-buildin/index.tsx deleted file mode 100644 index e69de29..0000000
         if (!text.startsWith('diff '))
             throw new Error(`Unsolved diff text: ${text}`)
         if (text.indexOf('\n--- ') === -1) {
-            // if (text.toLowerCase().indexOf('\nbinary files') === -1)
-            //     throw new Error(`Unsolved diff text: ${text}`)
             const filepath = text.split('\n')[0].split(' ').pop().substring(2)
             return new GitChange(extractFlag(text), filepath)
         }

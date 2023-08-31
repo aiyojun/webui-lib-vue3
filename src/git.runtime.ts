@@ -318,7 +318,7 @@ export async function readConfig() {
         .map(s => s.trim())
         .filter(s => s !== '')
         .forEach(line => {
-            let eqi = line.indexOf('=')
+            const eqi = line.indexOf('=')
             const key = line.substring(0, eqi)
             const value = line.substring(eqi + 1)
             set(key, value)
@@ -401,6 +401,3 @@ export async function invoke(method: string, args: Array<any>) {
     }
     return {error: `No such method : ${method}`}
 }
-
-
-console.info(await readConfig())
